@@ -1,4 +1,41 @@
 const User = require("../models/userModel")
+const bcrypt = require("bcrypt")
+
+const signup = async (req,res)=>{
+    try{
+        const { name , email , password } = req.body;
+        const existingUser = await User.findOne({ email })
+        if(existingUser){
+            return res.status(400).json({
+                message:"User already exists with this email"
+            })
+        }
+
+        const hashedPassword = await bcrypt.hash(password,10)
+        const newUser = await User({
+            name,
+            email,
+            password:hashedPassword
+        })
+
+        const savedUser = await newUser.save()
+        res.status(201).json({
+      message: 'User registered successfully',
+      user: {
+        _id: savedUser._id,
+        name: savedUser.name,
+        email: savedUser.email,
+      },
+    });
+
+  }   catch(error){
+    console.error("Error during signup:", error);
+        res.status(500).json({ 
+            message:"server error while signing up",
+        })
+    }
+}
+
 
 const createUser = async (req,res)=>{
     try{
@@ -83,5 +120,5 @@ const deleteUser = async (req,res)=>{
     }
 }
 
-module.exports = { createUser , getUsers , getUserById , updateUser , deleteUser}
+module.exports = { createUser , getUsers , getUserById , updateUser , deleteUser , signup}
 

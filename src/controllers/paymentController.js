@@ -1,4 +1,4 @@
-const payment  = require('../services/paymentService');
+const Payment  = require('../models/paymentModel');
 
 const createPayment = async (req,res)=>{
     try{

@@ -1,8 +1,8 @@
-const review    = require('../models/reviewModel');
+const Review    = require('../models/reviewModel');
 
 const addReview = async (req,res)=>{
     try{
-        const newReview = await review.create(req.body) 
+        const newReview = await Review.create(req.body) 
         res.status(201).json({
             message:"Review added",
             review:newReview
@@ -93,7 +93,7 @@ const deleteReview = async (req,res)=>{
     }
 }
 
-module.exports = { createReview , getReviews , getReviewById , updateReview , deleteReview }
+module.exports = { addReview , getReviews , getReviewById , updateReview , deleteReview }
 
 
 

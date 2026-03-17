@@ -2,20 +2,20 @@ const mongoose = require('mongoose');
 
 const parkingLotSchema = new mongoose.Schema({  
     name: {
-        type:string,
+        type: String,
         required:true
     },
     locaiton: {
-        address: string,
-        city: string,
-        pincide: number
+        address: String,
+        city: String,
+        pincide: Number
     },
     totalSlots: {
-        type: number,
+        type: Number,
         required: true
     },
     availableSlots: {
-        type: number,
+        type: Number,
         required: true
     },
      pricePerHour: {

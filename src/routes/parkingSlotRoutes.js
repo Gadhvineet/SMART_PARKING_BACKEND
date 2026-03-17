@@ -1,5 +1,6 @@
-const router = require('express').router()
-const parkingSlotController = requires('../controllers/parkingSlotController')
+const express = require("express")
+const router = express.Router()
+const parkingSlotController = require('../controllers/parkingSlotController')
 
 router.post("/create",parkingSlotController.addParkingSlot)
 router.get("/get",parkingSlotController.getParkingSlots)

@@ -1,10 +1,11 @@
-const router = require('express').Router()
-const vehicleController = require('../controllers/vehicleController')
+const express = require("express")
+const router = express.Router()
+const paymentController = require('../controllers/paymentController')
 
-router.post("/create",vehicleController.createVehicle)
-router.get("/get",vehicleController.getVehicles)
-router.get("/get/:id",vehicleController.getVehicleById)
-router.put("/update/:id",vehicleController.updateVehicle)
-router.delete("/delete/:id",vehicleController.deleteVehicle)
+router.post("/create",paymentController.createPayment)
+router.get("/get",paymentController.getPayments)
+router.get("/get/:id",paymentController.getPaymentById)
+router.put("/update/:id",paymentController.updatePayment)
+router.delete("/delete/:id",paymentController.deletePayment)
 
 module.exports = router
