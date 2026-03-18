@@ -12,7 +12,7 @@ const signup = async (req,res)=>{
         }
 
         const hashedPassword = await bcrypt.hash(password,10)
-        const newUser = await User({
+        const newUser = new User({
             name,
             email,
             password:hashedPassword
@@ -29,11 +29,12 @@ const signup = async (req,res)=>{
     });
 
   }   catch(error){
-    console.error("Error during signup:", error);
-        res.status(500).json({ 
-            message:"server error while signing up",
-        })
-    }
+    console.error("Error during signup:", error.message); // log exact error
+    res.status(500).json({ 
+        message:"Server error while signing up",
+        error: error.message // send error message to frontend temporarily for debugging
+    })
+}
 }
 
 
