@@ -1,5 +1,6 @@
 const User = require("../models/userModel")
 const bcrypt = require("bcrypt")
+const jwt = require("jsonwebtoken");
 
 const signup = async (req,res)=>{
     try{
@@ -37,6 +38,46 @@ const signup = async (req,res)=>{
 }
 }
 
+const loginUser = async (req,res)=>{
+    try{
+        const { email , password } = req.body;
+        const user = await User.findOne({ email })
+        if (!user) {
+            return res.status(400).json({
+                message: "User not found"
+            });
+        }
+         const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return res.status(400).json({
+                message: "Invalid password"
+            });
+        }
+const token = jwt.sign(
+            { id: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
+        );
+ res.status(200).json({
+            message: "Login successful",
+            token: token,
+            user: user
+        });
+
+         } catch (error) {
+        res.status(500).json({
+            message: "Server error",
+            error: error.message
+        });
+    }
+};
+
+
+
+
+
+
 
 const createUser = async (req,res)=>{
     try{
@@ -49,7 +90,7 @@ const createUser = async (req,res)=>{
     catch(error){
        res.status(500).json({
             message:"error while creating user",
-            err:err
+            error: error.message
         })
     }
 }
@@ -121,5 +162,5 @@ const deleteUser = async (req,res)=>{
     }
 }
 
-module.exports = { createUser , getUsers , getUserById , updateUser , deleteUser , signup}
+module.exports = { createUser , getUsers , getUserById , updateUser , deleteUser , signup, loginUser }
 

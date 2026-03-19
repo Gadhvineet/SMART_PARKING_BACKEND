@@ -8,6 +8,7 @@ router.get("/get/:id",userController.getUserById)
 router.put("/update/:id",userController.updateUser)
 router.delete("/delete/:id",userController.deleteUser)
 router.post('/register', userController.signup);
+router.post("/login", userController.loginUser);
 
 module.exports = router
 
