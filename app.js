@@ -19,9 +19,7 @@ const reservationRoutes = require("./src/routes/reservationRoutes")
 const paymentRoutes = require("./src/routes/paymentRoutes")
 const reviewRoutes = require("./src/routes/reviewRoutes")
 
-app.use('/api/users', userRoutes); 
-
-app.use("/users", userRoutes)
+app.use('/api/users', userRoutes)
 app.use("/vehicles", vehicleRoutes)
 app.use("/parkinglots", parkingLotRoutes)
 app.use("/slots", parkingSlotRoutes)
