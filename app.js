@@ -10,6 +10,9 @@ const DBConnection = require("./src/utils/DBConnection")
 DBConnection()
 
 app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+
+app.use('/uploads', express.static('uploads'))
 
 const userRoutes = require("./src/routes/userRoutes")
 const vehicleRoutes = require("./src/routes/vehicleRoutes")

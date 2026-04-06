@@ -2,96 +2,148 @@ const User = require("../models/userModel")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken");
 
-const signup = async (req,res)=>{
-    try{
-        const { name, email, password, role } = req.body;
-        const existingUser = await User.findOne({ email })
-        if(existingUser){
-            return res.status(400).json({
-                message:"User already exists with this email"
-            })
-        }
+const sendEmail = require("../utils/sendMail"); // 👈 ADD THIS IMPORT
+const signup = async (req, res) => {
+  try {
+    let { name, email, password, role } = req.body;
 
-        const hashedPassword = await bcrypt.hash(password,10)
-        const newUser = new User({
-            name,
-            email,
-            password:hashedPassword,
-              role: role || 'user'
+    // ✅ FIX: Normalize email (VERY IMPORTANT)
+    email = email.trim().toLowerCase();
 
-        })
+    // ✅ STEP 1: Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: "Invalid email format",
+      });
+    }
 
-        const savedUser = await newUser.save()
-        res.status(201).json({
-      message: 'User registered successfully',
+    // ✅ STEP 2: Check existing user
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        message: "User already exists with this email",
+      });
+    }
+
+    // ✅ STEP 3: Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // ✅ STEP 4: Create user
+    const newUser = new User({
+      name,
+      email, // ✅ now normalized
+      password: hashedPassword,
+      role: role || "user",
+    });
+
+    const savedUser = await newUser.save();
+
+    // ✅ STEP 5: Send Welcome Email
+    try {
+      await sendEmail(
+        savedUser.email,
+        "Welcome to FindPark 🚗",
+        `Hello ${savedUser.name},
+
+Welcome to FindPark 🚗
+
+Your account has been successfully created.
+
+Now you can:
+✔ Add vehicles
+✔ Find parking
+✔ Book slots (coming soon)
+
+Happy Parking 🚗
+- Team FindPark`
+      );
+    } catch (err) {
+      console.log("Email failed but user created:", err.message);
+    }
+
+  
+    res.status(201).json({
+      message: "User registered successfully",
       user: {
         _id: savedUser._id,
         name: savedUser.name,
         email: savedUser.email,
       },
     });
+  } catch (error) {
+    console.error("Error during signup:", error.message);
 
-  }   catch(error){
-    console.error("Error during signup:", error.message); // log exact error
-    res.status(500).json({ 
-        message:"Server error while signing up",
-        error: error.message // send error message to frontend temporarily for debugging
-    })
-}
-}
-
+    res.status(500).json({
+      message: "Server error while signing up",
+      error: error.message,
+    });
+  }
+};
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
 
-   
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required"
+      });
+    }
+
+  
+    email = email.trim().toLowerCase();
+    password = password.trim();
+
+  
     const user = await User.findOne({ email });
+
     if (!user) {
       return res.status(400).json({
         message: "User not found"
       });
     }
 
-    
+    // ✅ Compare password
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
       return res.status(400).json({
         message: "Invalid password"
       });
     }
 
+    // ✅ Generate token (WITH ROLE)
     const token = jwt.sign(
-      { id: user._id },
+      {
+        id: user._id,
+        role: user.role
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
- 
-  res.status(200).json({
-  message: "Login successful",
-  token: token,
-  user: {
-    _id: user._id,  
-    name: user.name,
-    email: user.email,
-    role: user.role
-  }
-});
+    // ✅ Send response
+    return res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
 
   } catch (error) {
-    res.status(500).json({
-      message: "Server error",
+    console.error("LOGIN ERROR:", error);
+
+    return res.status(500).json({
+      message: "Server error during login",
       error: error.message
     });
   }
 };
-
-
-
-
-
-
-
 const createUser = async (req,res)=>{
     try{
         const user = await User.create(req.body)
