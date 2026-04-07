@@ -21,6 +21,7 @@ const parkingSlotRoutes = require("./src/routes/parkingSlotRoutes")
 const reservationRoutes = require("./src/routes/reservationRoutes")
 const paymentRoutes = require("./src/routes/paymentRoutes")
 const reviewRoutes = require("./src/routes/reviewRoutes")
+const adminRoutes = require("./src/routes/adminRoutes")
 
 app.use('/api/users', userRoutes)
 app.use("/vehicles", vehicleRoutes)
@@ -29,6 +30,7 @@ app.use("/slots", parkingSlotRoutes)
 app.use("/reservations", reservationRoutes)
 app.use("/payments", paymentRoutes)
 app.use("/reviews", reviewRoutes)
+app.use("/admin", adminRoutes);
 
 app.get("/", (req,res)=>{
     res.send("Smart Parking API Running")

@@ -1,45 +1,56 @@
-const User = require("../models/userModel")
-const bcrypt = require("bcrypt")
+const User = require("../models/userModel");
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { validationResult } = require("express-validator");
 
-const sendEmail = require("../utils/sendMail"); // 👈 ADD THIS IMPORT
+const sendEmail = require("../utils/sendMail");
+
+
+// ==============================
+// SIGNUP USER
+// ==============================
+
 const signup = async (req, res) => {
   try {
-    let { name, email, password, role } = req.body;
 
-    // ✅ FIX: Normalize email (VERY IMPORTANT)
-    email = email.trim().toLowerCase();
+    // ✅ CHECK VALIDATION ERRORS
+    const errors = validationResult(req);
 
-    // ✅ STEP 1: Email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!errors.isEmpty()) {
       return res.status(400).json({
-        message: "Invalid email format",
+        message: "Validation failed",
+        errors: errors.array()
       });
     }
 
-    // ✅ STEP 2: Check existing user
+    let { name, email, password, role } = req.body;
+
+    // ✅ Normalize email
+    email = email.trim().toLowerCase();
+
+    // ✅ Check if user already exists
     const existingUser = await User.findOne({ email });
+
     if (existingUser) {
       return res.status(400).json({
         message: "User already exists with this email",
       });
     }
 
-    // ✅ STEP 3: Hash password
+    // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ STEP 4: Create user
+    // ✅ Create new user
     const newUser = new User({
       name,
-      email, // ✅ now normalized
+      email,
       password: hashedPassword,
       role: role || "user",
     });
 
     const savedUser = await newUser.save();
 
-    // ✅ STEP 5: Send Welcome Email
+    // ✅ Send Welcome Email
     try {
       await sendEmail(
         savedUser.email,
@@ -62,7 +73,6 @@ Happy Parking 🚗
       console.log("Email failed but user created:", err.message);
     }
 
-  
     res.status(201).json({
       message: "User registered successfully",
       user: {
@@ -71,31 +81,45 @@ Happy Parking 🚗
         email: savedUser.email,
       },
     });
+
   } catch (error) {
+
     console.error("Error during signup:", error.message);
 
     res.status(500).json({
       message: "Server error while signing up",
       error: error.message,
     });
+
   }
 };
-const loginUser = async (req, res) => {
-  try {
-    let { email, password } = req.body;
 
-    
-    if (!email || !password) {
+
+
+// ==============================
+// LOGIN USER
+// ==============================
+
+const loginUser = async (req, res) => {
+
+  try {
+
+    // ✅ CHECK VALIDATION ERRORS
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
       return res.status(400).json({
-        message: "Email and password are required"
+        message: "Validation failed",
+        errors: errors.array()
       });
     }
 
-  
+    let { email, password } = req.body;
+
     email = email.trim().toLowerCase();
     password = password.trim();
 
-  
+    // ✅ Check user
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -113,7 +137,7 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // ✅ Generate token (WITH ROLE)
+    // ✅ Generate JWT token
     const token = jwt.sign(
       {
         id: user._id,
@@ -123,8 +147,7 @@ const loginUser = async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    // ✅ Send response
-    return res.status(200).json({
+    res.status(200).json({
       message: "Login successful",
       token,
       user: {
@@ -136,96 +159,173 @@ const loginUser = async (req, res) => {
     });
 
   } catch (error) {
+
     console.error("LOGIN ERROR:", error);
 
-    return res.status(500).json({
+    res.status(500).json({
       message: "Server error during login",
       error: error.message
     });
+
   }
+
 };
-const createUser = async (req,res)=>{
-    try{
-        const user = await User.create(req.body)
-        res.status(201).json({
-            message:"User created successfully",
-            user:user
-        })
-    }
-    catch(error){
-       res.status(500).json({
-            message:"error while creating user",
-            error: error.message
-        })
-    }
-}
-const getUsers = async (req,res)=>{
-    try{
-        const users = await User.find()
 
-        res.status(200).json({
-            message:"Users fetched successfully",
-            users:users
-        })
-    }
-    catch(error){
-        res.status(500).json({
-            message:"Error while fetching users",
-            error:error
-        })
-    }
-}
-const getUserById = async (req,res)=>{
-    try{
-        const user = await User.findById(req.params.id)
 
-        res.status(200).json({
-            message:"User fetched successfully",
-            user:user
-        })
-    }
-    catch(error){
-        res.status(500).json({
-            message:"Error while fetching user",
-            error:error
-        })
-    }
-}
-const updateUser = async (req,res)=>{
-    try{
-        const user = await User.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            {new:true}
-        )
 
-        res.status(200).json({
-            message:"User updated successfully",
-            user:user
-        })
-    }
-    catch(error){
-        res.status(500).json({
-            message:"Error while updating user",
-            error:error
-        })
-    }
-}
-const deleteUser = async (req,res)=>{
-    try{
-        await User.findByIdAndDelete(req.params.id)
+// ==============================
+// CREATE USER (ADMIN / TEST)
+// ==============================
 
-        res.status(200).json({
-            message:"User deleted successfully"
-        })
-    }
-    catch(error){
-        res.status(500).json({
-            message:"Error while deleting user",
-            error:error
-        })
-    }
-}
+const createUser = async (req, res) => {
 
-module.exports = { createUser , getUsers , getUserById , updateUser , deleteUser , signup, loginUser }
+  try {
 
+    const user = await User.create(req.body);
+
+    res.status(201).json({
+      message: "User created successfully",
+      user: user
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "error while creating user",
+      error: error.message
+    });
+
+  }
+
+};
+
+
+
+// ==============================
+// GET ALL USERS
+// ==============================
+
+const getUsers = async (req, res) => {
+
+  try {
+
+    const users = await User.find();
+
+    res.status(200).json({
+      message: "Users fetched successfully",
+      users: users
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Error while fetching users",
+      error: error
+    });
+
+  }
+
+};
+
+
+
+// ==============================
+// GET USER BY ID
+// ==============================
+
+const getUserById = async (req, res) => {
+
+  try {
+
+    const user = await User.findById(req.params.id);
+
+    res.status(200).json({
+      message: "User fetched successfully",
+      user: user
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Error while fetching user",
+      error: error
+    });
+
+  }
+
+};
+
+
+
+// ==============================
+// UPDATE USER
+// ==============================
+
+const updateUser = async (req, res) => {
+
+  try {
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: "User updated successfully",
+      user: user
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Error while updating user",
+      error: error
+    });
+
+  }
+
+};
+
+
+
+// ==============================
+// DELETE USER
+// ==============================
+
+const deleteUser = async (req, res) => {
+
+  try {
+
+    await User.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      message: "User deleted successfully"
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Error while deleting user",
+      error: error
+    });
+
+  }
+
+};
+
+
+
+// ==============================
+// EXPORT
+// ==============================
+
+module.exports = {
+  createUser,
+  getUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+  signup,
+  loginUser
+};

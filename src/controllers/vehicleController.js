@@ -1,11 +1,24 @@
 const Vehicle = require('../models/vehicleModel');
+const { validationResult } = require("express-validator");
 
 const addVehicle = async (req, res) => {
   try {
-    const { vehicleName, vehicleType, vehicleNumber, colour } = req.body;
 
-    // Get image URL from upload
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        message: "Validation failed",
+        errors: errors.array()
+      });
+    }
+
+    let { vehicleName, vehicleType, vehicleNumber, colour } = req.body;
+
+    vehicleNumber = vehicleNumber.toUpperCase().trim();
+
     let imageUrl = "";
+
     if (req.file) {
       imageUrl = `uploads/${req.file.filename}`;
     }
@@ -36,6 +49,7 @@ const addVehicle = async (req, res) => {
 
 const getVehicles = async (req, res) => {
   try {
+
     const vehicles = await Vehicle.find({ user: req.user.id });
 
     res.status(200).json({
@@ -53,6 +67,7 @@ const getVehicles = async (req, res) => {
 
 const getVehicleById = async (req, res) => {
   try {
+
     const vehicle = await Vehicle.findById(req.params.id);
 
     res.status(200).json({
@@ -71,7 +86,20 @@ const getVehicleById = async (req, res) => {
 const updateVehicle = async (req, res) => {
   try {
 
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        message: "Validation failed",
+        errors: errors.array()
+      });
+    }
+
     let updateData = { ...req.body };
+
+    if (updateData.vehicleNumber) {
+      updateData.vehicleNumber = updateData.vehicleNumber.toUpperCase().trim();
+    }
 
     if (req.file) {
       updateData.image = req.file.path || req.file.secure_url;
