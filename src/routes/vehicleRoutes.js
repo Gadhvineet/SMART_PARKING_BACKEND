@@ -9,6 +9,7 @@ const { body } = require("express-validator");
 
 // VEHICLE VALIDATION
 const vehicleValidation = [
+
   body("vehicleName")
     .trim()
     .notEmpty()
@@ -18,15 +19,17 @@ const vehicleValidation = [
     .isIn(["2-wheeler", "3-wheeler", "4-wheeler", "heavy-vehicle"])
     .withMessage("Vehicle type must be 2-wheeler, 3-wheeler, 4-wheeler or heavy-vehicle"),
 
+  // ✅ UPDATED VEHICLE NUMBER VALIDATION (ACCEPTS MORE REAL FORMATS)
   body("vehicleNumber")
     .trim()
     .toUpperCase()
-    .matches(/^[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{4}$/)
-    .withMessage("Vehicle number must be valid (Example: GJ09JE8898)"),
+    .matches(/^[A-Z]{2}[0-9]{1,2}[A-Z]{1,2}[0-9]{4}$/)
+    .withMessage("Vehicle number must be valid (Example: GJ01AB1234)"),
 
   body("colour")
     .optional()
     .trim()
+
 ];
 
 
@@ -39,6 +42,7 @@ router.post(
   vehicleController.addVehicle
 );
 
+
 // GET USER VEHICLES
 router.get(
   "/get",
@@ -46,12 +50,14 @@ router.get(
   vehicleController.getVehicles
 );
 
+
 // GET SINGLE VEHICLE
 router.get(
   "/get/:id",
   authMiddleware(),
   vehicleController.getVehicleById
 );
+
 
 // UPDATE VEHICLE
 router.put(
@@ -61,6 +67,7 @@ router.put(
   vehicleValidation,
   vehicleController.updateVehicle
 );
+
 
 // DELETE VEHICLE
 router.delete(

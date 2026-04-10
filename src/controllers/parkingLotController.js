@@ -1,9 +1,11 @@
 const ParkingLot = require('../models/parkingLotModel');
+const ParkingSlot = require('../models/parkingSlotModel'); // 🔥 IMPORT SLOT MODEL
 
 
 // ADD PARKING LOT (OWNER)
 const addParkingLot = async (req, res) => {
   try {
+
     const newParking = await ParkingLot.create({
       ...req.body,
       owner: req.user.id
@@ -15,10 +17,12 @@ const addParkingLot = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       message: "Error while adding parking lot",
       error: error.message
     });
+
   }
 };
 
@@ -37,15 +41,17 @@ const getParkingLots = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       message: "Error while fetching parking lots",
       error: error.message
     });
+
   }
 };
 
 
-// 🔥 USER GETS ALL PARKING LOTS (IMPORTANT FOR FIND PARKING PAGE)
+// USER GETS ALL PARKING LOTS (IMPORTANT FOR FIND PARKING PAGE)
 const getAllParkingLots = async (req, res) => {
   try {
 
@@ -57,10 +63,12 @@ const getAllParkingLots = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       message: "Error while fetching all parking lots",
       error: error.message
     });
+
   }
 };
 
@@ -77,10 +85,12 @@ const getParkingLotById = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       message: "Error while fetching parking lot",
       error: error.message
     });
+
   }
 };
 
@@ -101,29 +111,41 @@ const updateParkingLot = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       message: "Error while updating parking lot",
       error: error.message
     });
+
   }
 };
 
 
-// DELETE PARKING LOT
+// DELETE PARKING LOT + DELETE ITS SLOTS
 const deleteParkingLot = async (req, res) => {
   try {
 
-    await ParkingLot.findByIdAndDelete(req.params.id);
+    const parkingLotId = req.params.id;
+
+    // 🔥 DELETE ALL SLOTS BELONGING TO THIS LOT
+    await ParkingSlot.deleteMany({
+      parkingLot: parkingLotId
+    });
+
+    // DELETE THE LOT
+    await ParkingLot.findByIdAndDelete(parkingLotId);
 
     res.status(200).json({
-      message: "Parking lot deleted successfully"
+      message: "Parking lot and its slots deleted successfully"
     });
 
   } catch (error) {
+
     res.status(500).json({
       message: "Error while deleting parking lot",
       error: error.message
     });
+
   }
 };
 
@@ -131,7 +153,7 @@ const deleteParkingLot = async (req, res) => {
 module.exports = {
   addParkingLot,
   getParkingLots,
-  getAllParkingLots, // 🔥 NEW FUNCTION
+  getAllParkingLots,
   getParkingLotById,
   updateParkingLot,
   deleteParkingLot

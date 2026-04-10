@@ -1,11 +1,20 @@
 const express = require("express")
 const router = express.Router()
-const parkingSlotController = require('../controllers/parkingSlotController')
 
-router.post("/create",parkingSlotController.addParkingSlot)
-router.get("/get",parkingSlotController.getParkingSlots)
-router.get("/get/:id",parkingSlotController.getParkingSlotById)
-router.put("/update/:id",parkingSlotController.updateParkingSlot)
-router.delete("/delete/:id",parkingSlotController.deleteParkingSlot)    
+const parkingSlotController = require("../controllers/parkingSlotController")
+
+router.post("/create", parkingSlotController.addParkingSlot)
+
+// CREATE MULTIPLE SLOTS
+router.post("/create-multiple", parkingSlotController.createMultipleSlots)
+
+// GET ALL SLOTS
+router.get("/get", parkingSlotController.getParkingSlots)
+
+// GET SLOTS BY PARKING LOT
+router.get("/lot/:lotId", parkingSlotController.getSlotsByLot)
+
+// DELETE SLOT
+router.delete("/delete/:id", parkingSlotController.deleteParkingSlot)
 
 module.exports = router
