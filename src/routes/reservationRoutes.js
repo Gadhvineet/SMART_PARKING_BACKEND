@@ -10,6 +10,10 @@ router.get("/get", authMiddleware(["admin"]), reservationController.getReservati
 
 router.get("/user", authMiddleware(["user"]), reservationController.getUserReservations);
 
+router.get("/owner", authMiddleware(["owner"]), reservationController.getOwnerReservations);
+
+router.get("/owner-active", authMiddleware(["owner"]), reservationController.getOwnerActiveBookings);
+
 router.put("/extend/:id", authMiddleware(["user"]), reservationController.extendReservation);
 
 router.put("/update/:id", authMiddleware(), reservationController.updateReservation);

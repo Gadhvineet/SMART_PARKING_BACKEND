@@ -1,9 +1,31 @@
-const express = require("express")
-const router = express.Router()
+const express = require("express");
+const router = express.Router();
+
 const reviewController = require('../controllers/reviewController');
-router.post("/create", reviewController.addReview);
-router.get("/get", reviewController.getReviews);
-router.get("/get/:id", reviewController.getReviewById);
-router.put("/update/:id", reviewController.updateReview);
-router.delete("/delete/:id", reviewController.deleteReview);
+const authMiddleware = require("../middleware/authMiddleware");
+
+
+// USER ADD REVIEW
+router.post(
+"/create",
+authMiddleware(["user"]),
+reviewController.addReview
+);
+
+
+
+// GET REVIEWS BY PARKING LOT
+router.get(
+"/lot/:lotId",
+reviewController.getReviewsByLot
+);
+
+
+// OWNER VIEW REVIEWS
+router.get(
+"/owner",
+authMiddleware(["owner"]),
+reviewController.getOwnerReviews
+);
+
 module.exports = router;

@@ -1,101 +1,96 @@
-const Review    = require('../models/reviewModel');
+const Review = require('../models/reviewModel');
+const Reservation = require("../models/reservationModel");
 
+
+// ADD REVIEW
 const addReview = async (req,res)=>{
     try{
-        const newReview = await Review.create(req.body) 
+
+        const { parkingLot, reservation, rating, comment } = req.body;
+
+        const newReview = await Review.create({
+            user: req.user.id,
+            parkingLot,
+            reservation,
+            rating,
+            comment
+        });
+
         res.status(201).json({
             message:"Review added",
             review:newReview
         })
+
     }
     catch(error){
         res.status(500).json({
             message:"Error while adding review",
-            error:error
+            error:error.message
         })
-    }   
+    }
 }
 
-const getReviews = async (req,res)=>{
+// GET REVIEWS FOR A PARKING LOT
+const getReviewsByLot = async (req,res)=>{
+
     try{
+
+        const reviews = await Review
+        .find({parkingLot:req.params.lotId})
+        .populate("user","name")
+        .sort({createdAt:-1});
+
+        res.status(200).json({
+            reviews
+        });
+
+    }
+    catch(error){
+
+        res.status(500).json({
+            message:"Error fetching reviews",
+            error:error.message
+        });
+
+    }
+
+};
+
+
+// OWNER GET REVIEWS OF THEIR LOTS
+const getOwnerReviews = async (req,res)=>{
+
+    try{
+
         const reviews = await Review
         .find()
-        .populate("user")
-        .populate("parkingLot")
+        .populate("user","name")
+        .populate({
+            path:"parkingLot",
+            match:{owner:req.user.id}
+        });
+
+        const ownerReviews = reviews.filter(r => r.parkingLot !== null);
 
         res.status(200).json({
-            message:"Reviews fetched successfully",
-            reviews:reviews
-        })
+            reviews:ownerReviews
+        });
+
     }
     catch(error){
+
         res.status(500).json({
-            message:"Error while fetching reviews",
-            error:error
-        })
+            message:"Error fetching owner reviews",
+            error:error.message
+        });
+
     }
-}
 
-const getReviewById = async (req,res)=>{
-    try{
-        const review = await Review
-        .findById(req.params.id)
-        .populate("user")
-        .populate("parkingLot")
-
-        res.status(200).json({
-            message:"Review fetched successfully",
-            review:review
-        })
-    }
-    catch(error){
-        res.status(500).json({
-            message:"Error while fetching review",
-            error:error
-        })
-    }
-}
-
-const updateReview = async (req,res)=>{
-    try{
-        const review = await Review.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            {new:true}
-        )
-
-        res.status(200).json({
-            message:"Review updated successfully",
-            review:review
-        })
-    }
-    catch(error){
-        res.status(500).json({
-            message:"Error while updating review",
-            error:error
-        })
-    }
-}
-
-const deleteReview = async (req,res)=>{
-    try{
-        await Review.findByIdAndDelete(req.params.id)
-
-        res.status(200).json({
-            message:"Review deleted successfully"
-        })
-    }
-    catch(error){
-        res.status(500).json({
-            message:"Error while deleting review",
-            error:error
-        })
-    }
-}
-
-module.exports = { addReview , getReviews , getReviewById , updateReview , deleteReview }
+};
 
 
-
-
-
+module.exports = {
+    addReview,
+    getReviewsByLot,
+    getOwnerReviews
+};

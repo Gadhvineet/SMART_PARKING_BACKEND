@@ -5,6 +5,8 @@ const parkingSlotController = require("../controllers/parkingSlotController")
 
 router.post("/create", parkingSlotController.addParkingSlot)
 
+router.post("/generate", parkingSlotController.generateSlots)
+
 // CREATE MULTIPLE SLOTS
 router.post("/create-multiple", parkingSlotController.createMultipleSlots)
 

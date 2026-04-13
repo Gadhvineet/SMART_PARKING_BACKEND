@@ -1,4 +1,6 @@
 const Reservation = require("../models/reservationModel");
+const ParkingSlot = require("../models/parkingSlotModel");
+const ParkingLot = require("../models/parkingLotModel");
 
 
 // CREATE RESERVATION
@@ -6,10 +8,32 @@ const createReservation = async (req, res) => {
 
   try {
 
+    const { slot, parkingLot } = req.body;
+
+    const slotDoc = await ParkingSlot.findById(slot);
+
+    if (!slotDoc) {
+      return res.status(404).json({ message: "Slot not found" });
+    }
+
+    if (slotDoc.status !== "available") {
+      return res.status(400).json({ message: "Slot is not available" });
+    }
+
     const reservation = await Reservation.create({
       ...req.body,
       user: req.user.id
     });
+
+    // UPDATE SLOT STATUS
+    slotDoc.status = "reserved";
+    await slotDoc.save();
+
+    // UPDATE AVAILABLE SLOTS
+    await ParkingLot.findByIdAndUpdate(
+      parkingLot,
+      { $inc: { availableSlots: -1 } }
+    );
 
     res.status(201).json({
       message: "Reservation created successfully",
@@ -89,7 +113,76 @@ const getUserReservations = async (req, res) => {
 
 
 
-// EXTEND PARKING TIME
+// OWNER GET RESERVATIONS
+const getOwnerReservations = async (req, res) => {
+
+  try {
+
+    const reservations = await Reservation
+      .find()
+      .populate("user")
+      .populate("vehicle")
+      .populate({
+        path: "parkingLot",
+        match: { owner: req.user.id }
+      })
+      .populate("slot")
+      .sort({ createdAt: -1 });
+
+    const ownerReservations = reservations.filter(
+      r => r.parkingLot !== null
+    );
+
+    res.status(200).json({
+      message: "Owner reservations fetched successfully",
+      reservations: ownerReservations
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Error fetching owner reservations",
+      error: error.message
+    });
+
+  }
+
+};
+
+// OWNER ACTIVE BOOKINGS COUNT
+const getOwnerActiveBookings = async (req, res) => {
+
+  try {
+
+    const reservations = await Reservation
+      .find({ status: "active" })
+      .populate({
+        path: "parkingLot",
+        match: { owner: req.user.id }
+      });
+
+    const ownerReservations = reservations.filter(
+      r => r.parkingLot !== null
+    );
+
+    res.status(200).json({
+      count: ownerReservations.length
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Error fetching active bookings",
+      error: error.message
+    });
+
+  }
+
+};
+
+
+
+// EXTEND PARKING
 const extendReservation = async (req, res) => {
 
   try {
@@ -102,7 +195,9 @@ const extendReservation = async (req, res) => {
 
     const currentEndTime = new Date(reservation.timePeriod.endTime);
 
-    const newEndTime = new Date(currentEndTime.getTime() + 60 * 60 * 1000); // +1 hour
+    const newEndTime = new Date(
+      currentEndTime.getTime() + 60 * 60 * 1000
+    );
 
     reservation.timePeriod.endTime = newEndTime;
 
@@ -126,7 +221,7 @@ const extendReservation = async (req, res) => {
 
 
 
-// UPDATE
+// UPDATE RESERVATION
 const updateReservation = async (req, res) => {
 
   try {
@@ -136,6 +231,23 @@ const updateReservation = async (req, res) => {
       req.body,
       { new: true }
     );
+
+    // IF CANCELLED → FREE SLOT
+    if (req.body.status === "cancelled") {
+
+      const slot = await ParkingSlot.findById(reservation.slot);
+
+      if (slot) {
+        slot.status = "available";
+        await slot.save();
+      }
+
+      await ParkingLot.findByIdAndUpdate(
+        reservation.parkingLot,
+        { $inc: { availableSlots: 1 } }
+      );
+
+    }
 
     res.status(200).json({
       message: "Reservation updated successfully",
@@ -155,10 +267,28 @@ const updateReservation = async (req, res) => {
 
 
 
-// DELETE
+// DELETE RESERVATION
 const deleteReservation = async (req, res) => {
 
   try {
+
+    const reservation = await Reservation.findById(req.params.id);
+
+    if (reservation) {
+
+      const slot = await ParkingSlot.findById(reservation.slot);
+
+      if (slot) {
+        slot.status = "available";
+        await slot.save();
+      }
+
+      await ParkingLot.findByIdAndUpdate(
+        reservation.parkingLot,
+        { $inc: { availableSlots: 1 } }
+      );
+
+    }
 
     await Reservation.findByIdAndDelete(req.params.id);
 
@@ -182,6 +312,8 @@ module.exports = {
   createReservation,
   getReservations,
   getUserReservations,
+  getOwnerReservations,
+  getOwnerActiveBookings,
   extendReservation,
   updateReservation,
   deleteReservation
