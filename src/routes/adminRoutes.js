@@ -11,6 +11,7 @@ router.get("/dashboard", adminAuth, adminController.getDashboardStats);
 
 // USERS
 router.get("/users", adminAuth, adminController.getAllUsers);
+router.patch("/users/:id/status", adminAuth, adminController.updateUserStatus);
 router.delete("/users/:id", adminAuth, adminController.deleteUser);
 
 
@@ -29,6 +30,8 @@ router.get("/slots", adminAuth, adminController.getAllSlots);
 
 // BOOKINGS
 router.get("/bookings", adminAuth, adminController.getAllBookings);
+router.patch("/bookings/:id/cancel", adminAuth, adminController.cancelBooking);
+router.post("/bookings/:id/report", adminAuth, adminController.reportBookingOwner);
 
 
 module.exports = router;

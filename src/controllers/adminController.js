@@ -2,6 +2,9 @@ const User = require("../models/userModel");
 const ParkingLot = require("../models/parkingLotModel");
 const Slot = require("../models/parkingSlotModel");
 const Reservation = require("../models/reservationModel");
+const Payment = require("../models/paymentModel");
+const Review = require("../models/reviewModel");
+const Notification = require("../models/notificationModel");
 
 
 // ==============================
@@ -117,9 +120,40 @@ const getAllParkingLots = async (req, res) => {
 
     const lots = await ParkingLot.find().populate("owner", "name email");
 
+    const lotsWithAnalytics = await Promise.all(lots.map(async (lot) => {
+      // Get all reservations for this lot
+      const reservations = await Reservation.find({ parkingLot: lot._id })
+        .populate("user", "name email")
+        .populate("vehicle", "plateNumber type");
+        
+      const reservationIds = reservations.map(r => r._id);
+
+      // Get completed payments for these reservations
+      const payments = await Payment.find({ reservation: { $in: reservationIds }, paymentStatus: 'completed' });
+      const totalRevenue = payments.reduce((acc, pay) => acc + pay.amount, 0);
+
+      // Get reviews for this lot
+      const reviews = await Review.find({ parkingLot: lot._id }).populate("user", "name");
+      const totalReviews = reviews.length;
+      const averageRating = totalReviews > 0 ? (reviews.reduce((acc, rev) => acc + rev.rating, 0) / totalReviews).toFixed(1) : "N/A";
+
+      // Get slots for this lot
+      const slots = await Slot.find({ parkingLot: lot._id });
+
+      return {
+        ...lot.toObject(),
+        totalRevenue,
+        averageRating,
+        totalReviews,
+        reservations,
+        reviews,
+        slots
+      };
+    }));
+
     res.status(200).json({
       message: "Parking lots fetched successfully",
-      lots
+      lots: lotsWithAnalytics
     });
 
   } catch (error) {
@@ -191,8 +225,10 @@ const getAllBookings = async (req, res) => {
 
     const bookings = await Reservation.find()
       .populate("user", "name email")
+      .populate("vehicle", "plateNumber type")
       .populate("slot")
-      .populate("parkingLot");
+      .populate({ path: "parkingLot", populate: { path: "owner" } })
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       message: "Bookings fetched successfully",
@@ -210,13 +246,90 @@ const getAllBookings = async (req, res) => {
 };
 
 
+// ==============================
+// CANCEL BOOKING
+// ==============================
+
+const cancelBooking = async (req, res) => {
+  try {
+    const booking = await Reservation.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    booking.status = "cancelled";
+    await booking.save();
+
+    res.status(200).json({ message: "Booking cancelled successfully", booking });
+  } catch (error) {
+    res.status(500).json({ message: "Error cancelling booking", error: error.message });
+  }
+};
+
+
+// ==============================
+// REPORT BOOKING TO OWNER
+// ==============================
+
+const reportBookingOwner = async (req, res) => {
+  try {
+    const { message } = req.body;
+    const booking = await Reservation.findById(req.params.id).populate("parkingLot");
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    const ownerId = booking.parkingLot.owner;
+
+    const notification = new Notification({
+      user: ownerId,
+      title: "Admin Report Regarding Booking",
+      message: message || `Admin has raised a flag regarding booking ID: ${booking._id}`,
+      type: "warning",
+      reservation: booking._id
+    });
+
+    await notification.save();
+
+    res.status(200).json({ message: "Owner notified successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error notifying owner", error: error.message });
+  }
+};
+
+
+// ==============================
+// UPDATE USER STATUS (BLOCK/ACTIVE)
+// ==============================
+
+const updateUserStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const user = await User.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: `User status updated to ${status}`,
+      user
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error updating status",
+      error: error.message
+    });
+  }
+};
+
+
 module.exports = {
   getDashboardStats,
   getAllUsers,
   getAllOwners,
+  updateUserStatus,
   deleteUser,
   getAllParkingLots,
   deleteParkingLot,
   getAllSlots,
-  getAllBookings
+  getAllBookings,
+  cancelBooking,
+  reportBookingOwner
 };
