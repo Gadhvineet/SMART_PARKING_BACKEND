@@ -317,6 +317,153 @@ const deleteUser = async (req, res) => {
 
 
 // ==============================
+// GET PROFILE (BY TOKEN)
+// ==============================
+
+const getProfile = async (req, res) => {
+
+  try {
+
+    const user = await User.findById(req.user.id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile fetched successfully",
+      user
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Error fetching profile",
+      error: error.message
+    });
+
+  }
+
+};
+
+
+
+// ==============================
+// UPDATE PROFILE (BY TOKEN)
+// ==============================
+
+const updateProfile = async (req, res) => {
+
+  try {
+
+    const { name, email } = req.body;
+
+    // Only allow updating name and email
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email.trim().toLowerCase();
+
+    // Check if email already taken by another user
+    if (email) {
+      const existing = await User.findOne({
+        email: email.trim().toLowerCase(),
+        _id: { $ne: req.user.id }
+      });
+
+      if (existing) {
+        return res.status(400).json({
+          message: "Email is already in use by another account"
+        });
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      updateData,
+      { new: true }
+    ).select("-password");
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Error updating profile",
+      error: error.message
+    });
+
+  }
+
+};
+
+
+
+// ==============================
+// CHANGE PASSWORD
+// ==============================
+
+const changePassword = async (req, res) => {
+
+  try {
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        message: "Current password and new password are required"
+      });
+    }
+
+    if (newPassword.length < 5) {
+      return res.status(400).json({
+        message: "New password must be at least 5 characters"
+      });
+    }
+
+    // Get user WITH password
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({
+        message: "Current password is incorrect"
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({
+      message: "Password changed successfully"
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Error changing password",
+      error: error.message
+    });
+
+  }
+
+};
+
+
+
+// ==============================
 // EXPORT
 // ==============================
 
@@ -327,5 +474,8 @@ module.exports = {
   updateUser,
   deleteUser,
   signup,
-  loginUser
+  loginUser,
+  getProfile,
+  updateProfile,
+  changePassword
 };

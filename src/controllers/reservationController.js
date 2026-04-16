@@ -1,6 +1,7 @@
 const Reservation = require("../models/reservationModel");
 const ParkingSlot = require("../models/parkingSlotModel");
 const ParkingLot = require("../models/parkingLotModel");
+const Notification = require("../models/notificationModel");
 
 
 // CREATE RESERVATION
@@ -34,6 +35,14 @@ const createReservation = async (req, res) => {
       parkingLot,
       { $inc: { availableSlots: -1 } }
     );
+
+    // CREATE NOTIFICATION
+    await Notification.create({
+      user: req.user.id,
+      title: "Booking Confirmed! 🅿️",
+      message: `Your reservation at ${slotDoc.slotNumber} has been confirmed successfully.`,
+      type: "success"
+    });
 
     res.status(201).json({
       message: "Reservation created successfully",
@@ -203,6 +212,14 @@ const extendReservation = async (req, res) => {
 
     await reservation.save();
 
+    // CREATE NOTIFICATION
+    await Notification.create({
+      user: req.user.id, // Ensure user exists on req.user (may need to verify if extend route has auth context, but it should)
+      title: "Parking Extended ⏳",
+      message: "Your parking has been extended by 1 hour successfully.",
+      type: "info"
+    });
+
     res.status(200).json({
       message: "Parking time extended by 1 hour",
       reservation
@@ -247,7 +264,18 @@ const updateReservation = async (req, res) => {
         { $inc: { availableSlots: 1 } }
       );
 
+      // CREATE NOTIFICATION (CANCELLED)
+      if (reservation.user) {
+        await Notification.create({
+          user: reservation.user,
+          title: "Reservation Cancelled ❌",
+          message: "Your reservation has been cancelled successfully.",
+          type: "warning"
+        });
+      }
+
     }
+
 
     res.status(200).json({
       message: "Reservation updated successfully",
@@ -287,6 +315,16 @@ const deleteReservation = async (req, res) => {
         reservation.parkingLot,
         { $inc: { availableSlots: 1 } }
       );
+
+      // CREATE NOTIFICATION (DELETED/CANCELLED)
+      if (reservation.user) {
+        await Notification.create({
+          user: reservation.user,
+          title: "Reservation Removed ❌",
+          message: "Your reservation has been completely removed.",
+          type: "warning"
+        });
+      }
 
     }
 

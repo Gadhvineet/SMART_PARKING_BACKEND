@@ -32,6 +32,7 @@ const reservationRoutes = require("./src/routes/reservationRoutes");
 const paymentRoutes = require("./src/routes/paymentRoutes");
 const reviewRoutes = require("./src/routes/reviewRoutes");
 const adminRoutes = require("./src/routes/adminRoutes");
+const notificationRoutes = require("./src/routes/notificationRoutes");
 
 /* ================= API ROUTES ================= */
 
@@ -43,6 +44,7 @@ app.use("/reservations", reservationRoutes); // bookings
 app.use("/payments", paymentRoutes);   // payment
 app.use("/reviews", reviewRoutes);     // reviews
 app.use("/admin", adminRoutes);        // admin panel
+app.use("/api/notifications", notificationRoutes); // notifications
 
 /* ================= TEST ROUTE ================= */
 

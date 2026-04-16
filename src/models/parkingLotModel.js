@@ -31,6 +31,12 @@ const parkingLotSchema = new mongoose.Schema({
   pricePerHour: {
     type: Number,
     required: true
+  },
+
+  supportedVehicleTypes: {
+    type: [String],
+    enum: ['2-wheeler', '3-wheeler', '4-wheeler'],
+    default: ['2-wheeler', '3-wheeler', '4-wheeler']
   }
 
 }, { timestamps: true });
