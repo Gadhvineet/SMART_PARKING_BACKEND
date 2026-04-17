@@ -346,12 +346,92 @@ const deleteReservation = async (req, res) => {
 };
 
 
+// OWNER ANALYTICS DASHBOARD
+const getOwnerAnalytics = async (req, res) => {
+  try {
+    // Get all reservations associated with the owner's lots
+    const reservations = await Reservation.find()
+      .populate({
+        path: "parkingLot",
+        match: { owner: req.user.id }
+      });
+
+    // Filter out reservations where parkingLot is null (meaning it belongs to someone else)
+    const ownerReservations = reservations.filter(r => r.parkingLot !== null);
+
+    let totalRevenue = 0;
+    const monthlyRevenue = {
+      Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, 
+      Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0
+    };
+    
+    // To track performance per lot
+    const lotPerformanceMap = {};
+
+    ownerReservations.forEach(resv => {
+      // Calculate hours
+      const start = new Date(resv.timePeriod.startTime);
+      const end = new Date(resv.timePeriod.endTime);
+      let diffHours = (end - start) / (1000 * 60 * 60);
+      
+      // Safety bounds
+      if (diffHours < 0) diffHours = 0;
+
+      // Price per hour from populated lot
+      const rate = resv.parkingLot.pricePerHour || 0;
+      const revenue = parseFloat((diffHours * rate).toFixed(2));
+
+      totalRevenue += revenue;
+
+      // Group by Month (using start date)
+      const monthStr = start.toLocaleString('default', { month: 'short' });
+      if (monthlyRevenue[monthStr] !== undefined) {
+         monthlyRevenue[monthStr] += revenue;
+      }
+
+      // Group by Lot Name
+      const lotName = resv.parkingLot.name || "Unknown";
+      if (!lotPerformanceMap[lotName]) {
+        lotPerformanceMap[lotName] = 0;
+      }
+      lotPerformanceMap[lotName] += revenue;
+    });
+
+    // Format Monthly Trend for Recharts
+    const trendData = Object.keys(monthlyRevenue).map(month => ({
+      name: month,
+      revenue: parseFloat(monthlyRevenue[month].toFixed(2))
+    }));
+
+    // Format Top Lots for Recharts
+    const lotData = Object.keys(lotPerformanceMap).map(lot => ({
+      name: lot,
+      revenue: parseFloat(lotPerformanceMap[lot].toFixed(2))
+    })).sort((a,b) => b.revenue - a.revenue);
+
+    res.status(200).json({
+      totalRevenue: totalRevenue.toFixed(2),
+      totalBookings: ownerReservations.length,
+      trendData,
+      lotData
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Error computing analytics",
+      error: error.message
+    });
+  }
+};
+
+
 module.exports = {
   createReservation,
   getReservations,
   getUserReservations,
   getOwnerReservations,
   getOwnerActiveBookings,
+  getOwnerAnalytics,
   extendReservation,
   updateReservation,
   deleteReservation

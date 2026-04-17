@@ -15,7 +15,8 @@ const parkingLotSchema = new mongoose.Schema({
   location: {
     address: String,
     city: String,
-    pincode: Number
+    pincode: Number,
+    googleMapsLink: String
   },
 
   totalSlots: {

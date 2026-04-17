@@ -14,6 +14,8 @@ router.get("/owner", authMiddleware(["owner"]), reservationController.getOwnerRe
 
 router.get("/owner-active", authMiddleware(["owner"]), reservationController.getOwnerActiveBookings);
 
+router.get("/owner-analytics", authMiddleware(["owner"]), reservationController.getOwnerAnalytics);
+
 router.put("/extend/:id", authMiddleware(["user"]), reservationController.extendReservation);
 
 router.put("/update/:id", authMiddleware(), reservationController.updateReservation);
