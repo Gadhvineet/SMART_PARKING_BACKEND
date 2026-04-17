@@ -25,9 +25,16 @@ const paymentSchema = new mongoose.Schema({
         default: 'pending'
     },
     transactionID: {
-        type: String,
-        required: true,
-        unique: true
+        type: String
+    },
+    razorpay_order_id: {
+        type: String
+    },
+    razorpay_payment_id: {
+        type: String
+    },
+    razorpay_signature: {
+        type: String
     }
 }, {timestamps: true}); 
 
