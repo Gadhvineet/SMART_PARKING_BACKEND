@@ -168,16 +168,36 @@ const getAllParkingLots = async (req, res) => {
 
 
 // ==============================
-// DELETE PARKING LOT
+// DELETE PARKING LOT (CASCADE)
 // ==============================
 
 const deleteParkingLot = async (req, res) => {
   try {
+    const lotId = req.params.id;
 
-    await ParkingLot.findByIdAndDelete(req.params.id);
+    // 1. Find all reservations for this lot
+    const reservations = await Reservation.find({ parkingLot: lotId });
+    const reservationIds = reservations.map(r => r._id);
+
+    // 2. Delete all payments linked to those reservations
+    if (reservationIds.length > 0) {
+      await Payment.deleteMany({ reservation: { $in: reservationIds } });
+    }
+
+    // 3. Delete all reservations for this lot
+    await Reservation.deleteMany({ parkingLot: lotId });
+
+    // 4. Delete all slots for this lot
+    await Slot.deleteMany({ parkingLot: lotId });
+
+    // 5. Delete all reviews for this lot
+    await Review.deleteMany({ parkingLot: lotId });
+
+    // 6. Delete the parking lot itself
+    await ParkingLot.findByIdAndDelete(lotId);
 
     res.status(200).json({
-      message: "Parking lot deleted"
+      message: "Parking lot and all associated data deleted successfully"
     });
 
   } catch (error) {
@@ -247,13 +267,38 @@ const getAllBookings = async (req, res) => {
 
 
 // ==============================
-// CANCEL BOOKING
+// CANCEL BOOKING (+ FREE SLOT)
 // ==============================
 
 const cancelBooking = async (req, res) => {
   try {
     const booking = await Reservation.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    // Only process if booking wasn't already cancelled/completed
+    if (booking.status === "active") {
+
+      // Free the slot
+      const slot = await Slot.findById(booking.slot);
+      if (slot) {
+        slot.status = "available";
+        await slot.save();
+      }
+
+      // Increment available slots on the parking lot
+      await ParkingLot.findByIdAndUpdate(
+        booking.parkingLot,
+        { $inc: { availableSlots: 1 } }
+      );
+
+      // Notify the user
+      await Notification.create({
+        user: booking.user,
+        title: "Booking Cancelled by Admin ❌",
+        message: "Your reservation has been cancelled by the administrator. The slot has been released.",
+        type: "warning"
+      });
+    }
 
     booking.status = "cancelled";
     await booking.save();

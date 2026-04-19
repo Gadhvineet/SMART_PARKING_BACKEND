@@ -28,4 +28,12 @@ authMiddleware(["owner"]),
 reviewController.getOwnerReviews
 );
 
+
+// CHECK IF USER REVIEWED A RESERVATION
+router.get(
+"/check/:reservationId",
+authMiddleware(["user"]),
+reviewController.checkReviewExists
+);
+
 module.exports = router;

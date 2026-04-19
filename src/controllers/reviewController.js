@@ -8,6 +8,32 @@ const addReview = async (req,res)=>{
 
         const { parkingLot, reservation, rating, comment } = req.body;
 
+        // 1. Verify the reservation exists and belongs to the user
+        const reservationDoc = await Reservation.findById(reservation);
+        if (!reservationDoc) {
+            return res.status(404).json({ message: "Reservation not found" });
+        }
+        if (reservationDoc.user.toString() !== req.user.id) {
+            return res.status(403).json({ message: "You can only review your own reservations" });
+        }
+
+        // 2. Ensure parking time is completed (endTime must be in the past)
+        const now = new Date();
+        if (new Date(reservationDoc.timePeriod.endTime) > now) {
+            return res.status(400).json({ message: "You can only review after your parking session has ended" });
+        }
+
+        // 3. Prevent cancelled bookings from being reviewed
+        if (reservationDoc.status === "cancelled") {
+            return res.status(400).json({ message: "Cancelled reservations cannot be reviewed" });
+        }
+
+        // 4. Check for duplicate review (one review per reservation per user)
+        const existingReview = await Review.findOne({ user: req.user.id, reservation });
+        if (existingReview) {
+            return res.status(400).json({ message: "You have already reviewed this reservation" });
+        }
+
         const newReview = await Review.create({
             user: req.user.id,
             parkingLot,
@@ -89,8 +115,30 @@ const getOwnerReviews = async (req,res)=>{
 };
 
 
+// CHECK IF USER ALREADY REVIEWED A RESERVATION
+const checkReviewExists = async (req, res) => {
+    try {
+        const existing = await Review.findOne({
+            user: req.user.id,
+            reservation: req.params.reservationId
+        });
+
+        res.status(200).json({
+            hasReview: !!existing
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Error checking review",
+            error: error.message
+        });
+    }
+};
+
+
 module.exports = {
     addReview,
     getReviewsByLot,
-    getOwnerReviews
+    getOwnerReviews,
+    checkReviewExists
 };

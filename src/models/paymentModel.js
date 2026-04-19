@@ -3,7 +3,7 @@ const paymentSchema = new mongoose.Schema({
     reservation: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Reservation', 
-        required: true
+        required: false
     },
     user:{
         type: mongoose.Schema.Types.ObjectId,

@@ -52,10 +52,19 @@ app.get("/", (req, res) => {
   res.send("Smart Parking API Running");
 });
 
+/* ================= AUTO-COMPLETE EXPIRED BOOKINGS ================= */
+
+const autoCompleteExpiredReservations = require("./src/utils/autoCompleteReservations");
+
 /* ================= SERVER ================= */
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+
+  // Run immediately on server start, then every 60 seconds
+  autoCompleteExpiredReservations();
+  setInterval(autoCompleteExpiredReservations, 60 * 1000);
+  console.log("⏰ Auto-complete scheduler started (checks every 60s)");
 });

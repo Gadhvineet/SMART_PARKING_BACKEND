@@ -9,7 +9,32 @@ const createReservation = async (req, res) => {
 
   try {
 
-    const { slot, parkingLot } = req.body;
+    const { slot, parkingLot, timePeriod } = req.body;
+
+    // SERVER-SIDE: Reject bookings with past start time
+    if (timePeriod && timePeriod.startTime) {
+      const startTime = new Date(timePeriod.startTime);
+      const now = new Date();
+      // Allow a small 2-minute grace window for network latency
+      now.setMinutes(now.getMinutes() - 2);
+      if (startTime < now) {
+        return res.status(400).json({ message: "Cannot create a reservation for a past date/time." });
+      }
+    }
+
+    // SERVER-SIDE: Reject if end time is before or same as start time
+    if (timePeriod && timePeriod.startTime && timePeriod.endTime) {
+      const startTime = new Date(timePeriod.startTime);
+      const endTime = new Date(timePeriod.endTime);
+      if (endTime <= startTime) {
+        return res.status(400).json({ message: "End time must be after the start time." });
+      }
+      // Minimum 1 hour
+      const diffMs = endTime - startTime;
+      if (diffMs < 60 * 60 * 1000) {
+        return res.status(400).json({ message: "Minimum parking duration is 1 hour." });
+      }
+    }
 
     const slotDoc = await ParkingSlot.findById(slot);
 

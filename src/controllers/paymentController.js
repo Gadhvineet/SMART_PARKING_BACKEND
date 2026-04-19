@@ -19,8 +19,8 @@ const createOrder = async (req, res) => {
     try {
         const { amount, reservation, user, paymentMethod } = req.body;
 
-        if (!amount || !reservation || !user) {
-            return res.status(400).json({ message: "amount, reservation, and user are required" });
+        if (!amount || !user) {
+            return res.status(400).json({ message: "amount and user are required" });
         }
 
         const options = {
@@ -33,14 +33,20 @@ const createOrder = async (req, res) => {
 
         if (!order) return res.status(500).json({ message: "Some error occurred with Razorpay" });
 
-        const payment = await Payment.create({
-            reservation,
+        const paymentData = {
             user,
             amount,
             paymentMethod: paymentMethod || 'card',
             paymentStatus: 'pending',
             razorpay_order_id: order.id
-        });
+        };
+
+        // Only include reservation if provided (payment-first flow may not have it yet)
+        if (reservation) {
+            paymentData.reservation = reservation;
+        }
+
+        const payment = await Payment.create(paymentData);
 
         res.status(201).json({
             message: "Order created successfully",
